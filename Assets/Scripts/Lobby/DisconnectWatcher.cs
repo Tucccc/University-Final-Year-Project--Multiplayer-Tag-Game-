@@ -36,8 +36,8 @@ public class DisconnectWatcher : MonoBehaviour
                 DisconnectNotice.Message = "Disconnected from host.";
 
             // Load Bootstrap so the player can Host/Join again
-            if (SceneManager.GetActiveScene().name != "Bootstrap")
-                SceneManager.LoadScene("Bootstrap");
+            if (SceneManager.GetActiveScene().name != "Menu")
+                SceneManager.LoadScene("Menu");
         }
 
         if (args.ConnectionState == LocalConnectionState.Stopped)
@@ -45,8 +45,8 @@ public class DisconnectWatcher : MonoBehaviour
             RoundOverUI.SetControlsEnabled(false);
             if (string.IsNullOrWhiteSpace(DisconnectNotice.Message))
                 DisconnectNotice.Message = "Disconnected from host.";
-            if (SceneManager.GetActiveScene().name != "Bootstrap")
-                SceneManager.LoadScene("Bootstrap");
+            if (SceneManager.GetActiveScene().name != "Menu")
+                SceneManager.LoadScene("Menu");
         }
     }
 }

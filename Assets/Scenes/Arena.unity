@@ -997,6 +997,7 @@ GameObject:
   - component: {fileID: 1253747441}
   - component: {fileID: 1253747442}
   - component: {fileID: 1253747445}
+  - component: {fileID: 1253747446}
   m_Layer: 5
   m_Name: RoundOver
   m_TagString: Untagged
@@ -1105,6 +1106,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoundOverPanel
   canvasGroup: {fileID: 1253747442}
+--- !u!114 &1253747446
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1253747439}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4430a824525135542ace79949fe8fa1b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RoundOverButtons
+  startNextRoundButton: {fileID: 1973741146}
+  backToLobbyButton: {fileID: 1871291712}
+  leaveButton: {fileID: 1735517215}
 --- !u!1 &1402568459
 GameObject:
   m_ObjectHideFlags: 0
@@ -2114,7 +2130,7 @@ GameObject:
   - component: {fileID: 1872822299}
   - component: {fileID: 1872822298}
   m_Layer: 5
-  m_Name: Canvas
+  m_Name: RoundOverUI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2883,9 +2899,11 @@ MonoBehaviour:
   _initializeOrder: 0
   _preventDespawnOnDisconnect: 0
   _defaultDespawnType: 0
+  _initializedTimestamp: 0
   NetworkObserver: {fileID: 0}
   _enablePrediction: 0
   _predictionType: 0
+  _localReconcileCorrectionType: 2
   _graphicalObject: {fileID: 0}
   _detachGraphicalObject: 0
   _enableStateForwarding: 1
@@ -2900,7 +2918,7 @@ MonoBehaviour:
   <PrefabId>k__BackingField: 65535
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 0
-  <SceneId>k__BackingField: 1056927679
+  SceneId: 1542909631
   SerializedTransformProperties:
     Position: {x: 0, y: 0, z: 0}
     Rotation: {x: 0, y: 0, z: 0, w: 0}
