@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7795122744963821251}
   - component: {fileID: 7960306597443879550}
-  - component: {fileID: 4705883055475072424}
+  - component: {fileID: -1143610267999417151}
   m_Layer: 0
   m_Name: LobbyPlayerState
   m_TagString: Untagged
@@ -45,10 +45,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0f7a275d820a74e429a6f98862f4e016, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LobbyPlayerState
-  _componentIndexCache: 255
-  _addedNetworkObject: {fileID: 4705883055475072424}
+  _componentIndexCache: 0
+  _addedNetworkObject: {fileID: -1143610267999417151}
   _networkObjectCache: {fileID: 0}
---- !u!114 &4705883055475072424
+--- !u!114 &-1143610267999417151
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

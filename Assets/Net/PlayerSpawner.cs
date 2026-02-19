@@ -10,6 +10,8 @@ public class PlayerSpawner : NetworkBehaviour
     [SerializeField] private NetworkObject playerPrefab;
     [SerializeField] private Transform[] spawnPoints;
 
+
+
     // Spawn a player object for every connected client that doesn't already have one.
     [Server]
     public void SpawnAllConnected()
@@ -36,30 +38,45 @@ public class PlayerSpawner : NetworkBehaviour
         }
     }
 
-    // Move every connected player's object back to spawn for a new round.
+
+
     [Server]
     public void ResetAllToSpawns()
     {
         var server = base.NetworkManager.ServerManager;
         var conns = server.Clients.Values.ToList();
 
-        for (int i = 0; i < conns.Count; i++)
+        foreach (var conn in conns)
         {
-            var conn = conns[i];
             var no = conn.FirstObject;
             if (no == null) continue;
 
-            Transform sp = spawnPoints[i % Mathf.Max(1, spawnPoints.Length)];
+            int idx = conn.ClientId % Mathf.Max(1, spawnPoints.Length);
+            Transform sp = spawnPoints[idx];
 
-            // If you use CharacterController, disable/enable around teleport to avoid ground snapping issues
+            // Server authoritative teleport
             var cc = no.GetComponent<CharacterController>();
             if (cc != null) cc.enabled = false;
+
             no.transform.SetPositionAndRotation(sp.position, sp.rotation);
+
+            var rb = no.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
+
             if (cc != null) cc.enabled = true;
 
-            // If you use Rigidbody, you may also want to clear velocities:
-            // var rb = no.GetComponent<Rigidbody>();
-            // if (rb) { rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+            Physics.SyncTransforms();
+
+            // IMPORTANT: Send TargetRpc from the PLAYER object (always observed by owner)
+            var respawn = no.GetComponent<PlayerRespawn>();
+            if (respawn != null)
+                respawn.TargetSnapToSpawn(conn, sp.position, sp.rotation);
+            else
+                Debug.LogWarning($"Player {no.name} missing PlayerRespawn component; client snap may fail.");
         }
     }
 

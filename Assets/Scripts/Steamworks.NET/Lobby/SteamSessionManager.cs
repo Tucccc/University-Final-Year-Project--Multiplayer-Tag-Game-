@@ -16,6 +16,10 @@ public class SteamSessionManager : MonoBehaviour
     [SerializeField] private int maxPlayers = 8;
     private CSteamID _originalHost = CSteamID.Nil;
 
+    private CSteamID _pendingJoinLobby = CSteamID.Nil;
+    private bool _isSwitchingLobbies;
+
+
 
     public CSteamID CurrentLobbyId { get; private set; } = CSteamID.Nil;
     public bool IsInLobby => CurrentLobbyId != CSteamID.Nil;
@@ -135,10 +139,62 @@ public class SteamSessionManager : MonoBehaviour
 
     void OnJoinRequested(GameLobbyJoinRequested_t cb)
     {
-        // This triggers when user accepts an invite / joins via friend UI
-        Debug.Log($"[SteamSession] Join requested lobby: {cb.m_steamIDLobby}");
-        JoinLobby(cb.m_steamIDLobby);
+        var targetLobby = cb.m_steamIDLobby;
+        Debug.Log($"[SteamSession] Join requested lobby: {targetLobby}");
+
+        // If we are already in a lobby / running FishNet, reset first.
+        if (IsInLobby || (FishNet.InstanceFinder.NetworkManager != null &&
+                         (FishNet.InstanceFinder.NetworkManager.ClientManager.Started ||
+                          FishNet.InstanceFinder.NetworkManager.ServerManager.Started)))
+        {
+            _pendingJoinLobby = targetLobby;
+
+            if (!_isSwitchingLobbies)
+                StartCoroutine(SwitchLobbyThenJoin());
+            return;
+        }
+
+        JoinLobby(targetLobby);
     }
+    private System.Collections.IEnumerator SwitchLobbyThenJoin()
+    {
+        _isSwitchingLobbies = true;
+
+        // Stop FishNet cleanly
+        var nm = FishNet.InstanceFinder.NetworkManager;
+        if (nm != null)
+        {
+            if (nm.ClientManager.Started) nm.ClientManager.StopConnection();
+            if (nm.ServerManager.Started) nm.ServerManager.StopConnection(true);
+        }
+
+        // Leave current Steam lobby
+        if (CurrentLobbyId != CSteamID.Nil)
+            SteamMatchmaking.LeaveLobby(CurrentLobbyId);
+
+        // Reset local state immediately
+        CurrentLobbyId = CSteamID.Nil;
+        IsHost = false;
+
+        // Give a frame for scene/network objects to tear down
+        yield return null;
+
+        // Optional but recommended: force a clean scene before joining
+        // (prevents old lobby scene objects / UI from persisting)
+        SceneManager.LoadScene("Menu");
+
+        // Wait one more frame after scene swap
+        yield return null;
+
+        var lobby = _pendingJoinLobby;
+        _pendingJoinLobby = CSteamID.Nil;
+
+        Debug.Log($"[SteamSession] Switching complete. Joining lobby {lobby}...");
+        JoinLobby(lobby);
+
+        _isSwitchingLobbies = false;
+    }
+
 
     void OnLobbyChatUpdate(LobbyChatUpdate_t cb)
     {

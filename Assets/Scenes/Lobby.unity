@@ -1974,7 +1974,7 @@ MonoBehaviour:
   <PrefabId>k__BackingField: 65535
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 0
-  SceneId: 3569336055
+  SceneId: 4231982294
   SerializedTransformProperties:
     Position: {x: 0, y: 0, z: 0}
     Rotation: {x: 0, y: 0, z: 0, w: 0}
@@ -1995,7 +1995,7 @@ MonoBehaviour:
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 1438188908}
   _networkObjectCache: {fileID: 0}
-  lobbyPlayerStatePrefab: {fileID: 4705883055475072424, guid: 6f6353b80f1c3db4981ef556e573e8ad, type: 3}
+  lobbyPlayerStatePrefab: {fileID: -1143610267999417151, guid: 6f6353b80f1c3db4981ef556e573e8ad, type: 3}
 --- !u!4 &1438188910
 Transform:
   m_ObjectHideFlags: 0

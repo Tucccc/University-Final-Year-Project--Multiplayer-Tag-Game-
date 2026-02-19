@@ -1,31 +1,63 @@
 using UnityEngine;
+using System.Linq;
 
 public static class RoundOverUI
 {
-    /// <summary>True when gameplay input is allowed.</summary>
     public static bool ControlsEnabled { get; private set; } = true;
 
-    /// <summary>
-    /// Main entry used by RoundManager / disconnect code.
-    /// running = true  -> gameplay enabled, overlay hidden
-    /// running = false -> gameplay frozen, overlay shown
-    /// </summary>
+    // Buffer last requested state so scene timing doesn't matter.
+    private static bool _wantOverlayVisible;
+    private static bool _haveOverlayState;
+
     public static void SetRoundActiveClient(bool running)
     {
         ControlsEnabled = running;
-        TrySetOverlayVisible(!running);
+        SetOverlayVisible(!running);
     }
 
-    /// <summary>
-    /// Backwards-compatible helper for old code that was setting ControlsEnabled directly.
-    /// </summary>
     public static void SetControlsEnabled(bool enabled) => SetRoundActiveClient(enabled);
 
-    private static void TrySetOverlayVisible(bool show)
+    public static void SetOverlayVisible(bool show)
     {
-        // Simple, Unity-6-safe version: only look at active objects
-        var panel = Object.FindFirstObjectByType<RoundOverPanel>();
-        if (panel != null)
-            panel.SetVisible(show);
+        _wantOverlayVisible = show;
+        _haveOverlayState = true;
+
+        var panel = FindPanelIncludeInactive();
+        if (panel == null)
+            return;
+
+        // KEY: if it's disabled on the client, enable it before setting visible.
+        if (!panel.gameObject.activeSelf)
+            panel.gameObject.SetActive(true);
+
+        panel.SetVisible(show);
+    }
+
+    // Called by RoundOverPanel when it becomes available.
+    public static void NotifyPanelReady(RoundOverPanel panel)
+    {
+        if (panel == null) return;
+
+        if (_haveOverlayState)
+        {
+            if (_wantOverlayVisible && !panel.gameObject.activeSelf)
+                panel.gameObject.SetActive(true);
+
+            panel.SetVisible(_wantOverlayVisible);
+        }
+        else
+        {
+            panel.SetVisible(false);
+        }
+    }
+
+    private static RoundOverPanel FindPanelIncludeInactive()
+    {
+#if UNITY_2022_2_OR_NEWER
+        return Object.FindFirstObjectByType<RoundOverPanel>(FindObjectsInactive.Include);
+#else
+        return Resources.FindObjectsOfTypeAll<RoundOverPanel>()
+            .FirstOrDefault(p => p != null && p.gameObject.scene.IsValid() && p.gameObject.scene.isLoaded);
+#endif
     }
 }

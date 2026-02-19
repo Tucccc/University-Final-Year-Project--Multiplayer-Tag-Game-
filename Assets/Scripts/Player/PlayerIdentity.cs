@@ -1,7 +1,7 @@
-// Scripts/Game/PlayerIdentity.cs
 using UnityEngine;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
+using Steamworks;
 
 public class PlayerIdentity : NetworkBehaviour
 {
@@ -11,20 +11,51 @@ public class PlayerIdentity : NetworkBehaviour
     {
         base.OnStartNetwork();
 
-        // FishNet rule: inside OnStartNetwork use base.Owner.IsLocalClient
-        if (base.Owner != null && base.Owner.IsLocalClient)
+        Debug.Log($"[PlayerIdentity] OnStartNetwork. IsOwner={Owner.IsLocalClient} OwnerIsLocal={(Owner != null && Owner.IsLocalClient)}");
+
+        if (Owner != null && Owner.IsLocalClient)
         {
-            string n = PlayerPrefs.GetString("player_name", "Player");
+            string n = Steamworks.SteamFriends.GetPersonaName();
+            Debug.Log($"[PlayerIdentity] Local persona name='{n}'");
+
             if (string.IsNullOrWhiteSpace(n)) n = "Player";
             if (n.Length > 16) n = n.Substring(0, 16);
+
+            Debug.Log($"[PlayerIdentity] Sending name='{n}' to server");
             RequestSetNameServerRpc(n);
         }
     }
+    public override void OnStartClient()
+    {
+        base.OnStartClient();
+
+        if (!IsOwner) return;
+
+        string n = Steamworks.SteamFriends.GetPersonaName();
+        if (string.IsNullOrWhiteSpace(n)) n = "Player";
+        if (n.Length > 16) n = n.Substring(0, 16);
+
+        RequestSetNameServerRpc(n);
+    }
+
+
 
     [ServerRpc(RequireOwnership = true)]
     private void RequestSetNameServerRpc(string name)
     {
-        if (string.IsNullOrWhiteSpace(name)) return;
-        DisplayName.Value = name.Trim();
+        Debug.Log($"[PlayerIdentity] ServerRpc received name='{name}'");
+        DisplayName.Value = name;
+    }
+
+    public override void OnStartServer()
+    {
+        base.OnStartServer();
+        RoundManager.Instance?.RegisterIdentity(Owner, this);
+    }
+
+    public override void OnStopServer()
+    {
+        base.OnStopServer();
+        RoundManager.Instance?.UnregisterIdentity(Owner);
     }
 }

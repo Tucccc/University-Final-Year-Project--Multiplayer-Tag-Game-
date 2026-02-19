@@ -1,7 +1,6 @@
+﻿using FishNet;
 using UnityEngine;
 using UnityEngine.UI;
-using FishNet;
-using FishNet.Object;
 
 public class RoundOverButtons : MonoBehaviour
 {
@@ -12,8 +11,7 @@ public class RoundOverButtons : MonoBehaviour
 
     private void Awake()
     {
-        // (Optional) auto-find if you forget to assign in inspector.
-        // Comment these out if you prefer manual assignment.
+        // Optional auto-find if not assigned in Inspector
         if (!startNextRoundButton) startNextRoundButton = transform.Find("HostStartButton")?.GetComponent<Button>();
         if (!backToLobbyButton) backToLobbyButton = transform.Find("HostLobbyButton")?.GetComponent<Button>();
         if (!leaveButton) leaveButton = transform.Find("LeaveButton")?.GetComponent<Button>();
@@ -21,7 +19,14 @@ public class RoundOverButtons : MonoBehaviour
 
     private void OnEnable()
     {
-        // Clear then re-add so we never double bind when scene reloads / object re-enables
+        // Host-only interaction (host = server + client)
+        bool isHost = InstanceFinder.IsHost;
+
+        if (startNextRoundButton) startNextRoundButton.interactable = isHost;
+        if (backToLobbyButton) backToLobbyButton.interactable = isHost;
+        if (leaveButton) leaveButton.interactable = true;
+
+        // Bind once per enable
         if (startNextRoundButton)
         {
             startNextRoundButton.onClick.RemoveAllListeners();
@@ -43,44 +48,24 @@ public class RoundOverButtons : MonoBehaviour
 
     private void OnStartNextRoundClicked()
     {
+        if (!InstanceFinder.IsHost) return; // safety
         var rm = RoundManager.Instance;
         if (rm == null) return;
 
-        // Only host/server can start rounds (method is [Server])
-        if (rm.IsServer)
-            rm.StartNewRoundServer();
+        rm.StartNewRoundServerRpc();
     }
 
     private void OnBackToLobbyClicked()
     {
+        if (!InstanceFinder.IsHost) return; // safety
         var rm = RoundManager.Instance;
         if (rm == null) return;
 
-        // This RPC already blocks non-host (ClientId != 0) inside your code.
         rm.ReturnToLobbyServerRpc();
     }
 
     private void OnLeaveClicked()
     {
-        // Host leaves -> kick everyone (stop server + client)
-        // Client leaves -> disconnect client only
-        if (InstanceFinder.NetworkManager == null) return;
-
-        bool isHost = InstanceFinder.IsServerStarted; // host runs server
-
-        if (isHost)
-        {
-            // Optional message before shutdown (your RoundManager supports it)
-            var rm = RoundManager.Instance;
-            if (rm != null)
-                rm.HostShutdownAllServerRpc("Host ended the game.");
-
-            InstanceFinder.ServerManager.StopConnection(true);
-            InstanceFinder.ClientManager.StopConnection();
-        }
-        else
-        {
-            InstanceFinder.ClientManager.StopConnection();
-        }
+        SteamSessionManager.Instance?.LeaveAndReset();
     }
 }

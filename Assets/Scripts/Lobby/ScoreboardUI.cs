@@ -12,6 +12,7 @@ public class ScoreboardUI : MonoBehaviour
 
     [Header("UI Sections")]
     [SerializeField] private CanvasGroup scorePanelGroup; // assign your ScorePanel (or Scroll View parent) CanvasGroup
+    public TextMeshProUGUI winnerText;
 
     [SerializeField] private TMP_Text timerText;
     [SerializeField] private TMP_Text bigMessageText;
@@ -20,9 +21,19 @@ public class ScoreboardUI : MonoBehaviour
     private static string[] _bufferNames;
     private static int[] _bufferScores;
     private static bool _haveBufferedScores;
+
     private static int _bufferTimer = -1;
     private static bool _haveBufferedTimer;
-    private static bool _desiredScoreboardVisible; // for Tab hold state if you want to persist
+
+    private static bool _bufferWinnerVisible;
+    private static bool _haveBufferedWinnerVisible;
+
+    // Round over / big message buffering (THIS was missing).
+    private static bool _bufferRoundOverVisible;
+    private static bool _haveBufferedRoundOverVisible;
+    private static string _bufferBigMessage;
+    private static bool _bufferBigVisible;
+    private static bool _haveBufferedBigVisible;
 
     private bool _isVisible;
 
@@ -43,16 +54,39 @@ public class ScoreboardUI : MonoBehaviour
             scorePanelGroup.blocksRaycasts = false;
         }
 
+        // Default hidden
+        if (winnerText) winnerText.gameObject.SetActive(false);
         if (bigMessageText) bigMessageText.gameObject.SetActive(false);
 
         // Apply buffered payloads immediately.
         if (_haveBufferedScores && _bufferNames != null && _bufferScores != null)
-        {
             Refresh(_bufferNames, _bufferScores);
-        }
+
         if (_haveBufferedTimer)
-        {
             ApplyTimer(_bufferTimer);
+
+        // Apply buffered round over + big message state (so late UI still shows).
+        if (_haveBufferedBigVisible && bigMessageText)
+        {
+            bigMessageText.text = _bufferBigMessage ?? "";
+            bigMessageText.gameObject.SetActive(_bufferBigVisible);
+        }
+
+        if (_haveBufferedWinnerVisible && winnerText)
+            winnerText.gameObject.SetActive(_bufferWinnerVisible);
+
+        if (_haveBufferedRoundOverVisible && _bufferRoundOverVisible)
+            ApplyRoundOverNow();
+
+        // Keep winner text content updated, but DO NOT force it visible here.
+        var rm = RoundManager.Instance;
+        if (rm != null && winnerText != null)
+        {
+            rm.WinnerName.OnChange += (_, __, ___) =>
+            {
+                var w = rm.WinnerName.Value;
+                winnerText.text = string.IsNullOrWhiteSpace(w) ? "" : $"{w} WINS!";
+            };
         }
     }
 
@@ -67,16 +101,16 @@ public class ScoreboardUI : MonoBehaviour
 
         var kb = UnityEngine.InputSystem.Keyboard.current;
         if (kb != null) wantVisible = kb.tabKey.isPressed;
-        wantVisible = Input.GetKey(KeyCode.Tab);
+
+        // fallback for old input
+        if (Input.GetKey(KeyCode.Tab)) wantVisible = true;
 
         if (wantVisible != _isVisible)
             ShowScoreboard(wantVisible);
     }
 
-
     private void ShowScoreboard(bool show)
     {
-        _desiredScoreboardVisible = show;
         if (scorePanelGroup == null) return;
         _isVisible = show;
         scorePanelGroup.alpha = show ? 1f : 0f;
@@ -105,19 +139,66 @@ public class ScoreboardUI : MonoBehaviour
             _instance.ApplyTimer(secondsLeft);
     }
 
+    /// <summary>
+    /// Show Round Over UI on EVERY client (even if UI is not spawned yet).
+    /// </summary>
     public static void ShowRoundOver()
     {
+        _bufferRoundOverVisible = true;
+        _haveBufferedRoundOverVisible = true;
+
+        _bufferBigMessage = "ROUND OVER!";
+        _bufferBigVisible = true;
+        _haveBufferedBigVisible = true;
+
+        _bufferWinnerVisible = true;
+        _haveBufferedWinnerVisible = true;
+
         if (_instance == null) return;
+        _instance.ApplyRoundOverNow();
+    }
+
+    /// <summary>
+    /// Call this at the start of a new round to clear old winner/roundover UI.
+    /// </summary>
+    public static void HideRoundOver()
+    {
+        _bufferRoundOverVisible = false;
+        _haveBufferedRoundOverVisible = true;
+
+        _bufferBigVisible = false;
+        _haveBufferedBigVisible = true;
+
+        _bufferWinnerVisible = false;
+        _haveBufferedWinnerVisible = true;
+
+        if (_instance == null) return;
+
         if (_instance.bigMessageText)
-        {
-            _instance.bigMessageText.text = "ROUND OVER!";
-            _instance.bigMessageText.gameObject.SetActive(true);
-        }
+            _instance.bigMessageText.gameObject.SetActive(false);
+
+        if (_instance.winnerText)
+            _instance.winnerText.gameObject.SetActive(false);
+    }
+
+    // Keep old API but make it reliable.
+    public static void HideWinner()
+    {
+        _bufferWinnerVisible = false;
+        _haveBufferedWinnerVisible = true;
+
+        if (_instance?.winnerText)
+            _instance.winnerText.gameObject.SetActive(false);
     }
 
     public static void ShowBig(string msg)
     {
+        _bufferBigMessage = msg;
+        _bufferBigVisible = true;
+        _haveBufferedBigVisible = true;
+
         if (_instance == null) return;
+
         if (_instance.bigMessageText)
         {
             _instance.bigMessageText.text = msg;
@@ -129,18 +210,39 @@ public class ScoreboardUI : MonoBehaviour
 
     // ---------- Internal apply helpers ----------
 
+    private void ApplyRoundOverNow()
+    {
+        if (bigMessageText)
+        {
+            bigMessageText.text = "ROUND OVER!";
+            bigMessageText.gameObject.SetActive(true);
+        }
+
+        if (winnerText)
+        {
+            var winner = RoundManager.Instance != null ? RoundManager.Instance.WinnerName.Value : "";
+            winnerText.text = string.IsNullOrWhiteSpace(winner) ? "" : $"{winner} WINS!";
+            winnerText.gameObject.SetActive(true);
+        }
+    }
+
     private System.Collections.IEnumerator HideBigAfter(float delay)
     {
         yield return new WaitForSeconds(delay);
         if (bigMessageText) bigMessageText.gameObject.SetActive(false);
+
+        // Update buffer too so late-created UI doesn't re-show it.
+        _bufferBigVisible = false;
+        _haveBufferedBigVisible = true;
     }
 
     private void ApplyTimer(int secondsLeft)
     {
         if (timerText)
         {
-            int m = Mathf.Max(0, secondsLeft) / 60;
-            int s = Mathf.Max(0, secondsLeft) % 60;
+            int safe = Mathf.Max(0, secondsLeft);
+            int m = safe / 60;
+            int s = safe % 60;
             timerText.text = $"{m:0}:{s:00}";
         }
     }
@@ -159,10 +261,9 @@ public class ScoreboardUI : MonoBehaviour
             var row = Instantiate(rowPrefab, scoreContainer);
             foreach (var t in row.GetComponentsInChildren<TMP_Text>(true))
             {
-                if (t.name.Contains("Name"))  t.text = names[i];
+                if (t.name.Contains("Name")) t.text = names[i];
                 if (t.name.Contains("Score")) t.text = scores[i].ToString();
             }
-
         }
     }
 }

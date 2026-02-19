@@ -156,6 +156,7 @@ GameObject:
   - component: {fileID: 2699304268558771067}
   - component: {fileID: 8710346507027831776}
   - component: {fileID: -8911430256735156118}
+  - component: {fileID: -4413761258998537713}
   m_Layer: 3
   m_Name: Player
   m_TagString: Untagged
@@ -283,6 +284,7 @@ MonoBehaviour:
   - {fileID: 5945543248735338489}
   - {fileID: 2699304268558771067}
   - {fileID: 8710346507027831776}
+  - {fileID: -8911430256735156118}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
@@ -293,9 +295,11 @@ MonoBehaviour:
   _initializeOrder: 0
   _preventDespawnOnDisconnect: 0
   _defaultDespawnType: 0
+  _initializedTimestamp: -8584300786080476003
   NetworkObserver: {fileID: 0}
   _enablePrediction: 0
   _predictionType: 0
+  _localReconcileCorrectionType: 2
   _graphicalObject: {fileID: 0}
   _detachGraphicalObject: 0
   _enableStateForwarding: 1
@@ -307,10 +311,10 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 0
+  <PrefabId>k__BackingField: 1
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 2092870565765373345
-  <SceneId>k__BackingField: 0
+  SceneId: 0
   SerializedTransformProperties:
     Position: {x: 232.85486, y: 0, z: -689.8744}
     Rotation: {x: 0, y: 0, z: 0, w: 1}
@@ -331,7 +335,9 @@ MonoBehaviour:
   _componentIndexCache: 0
   _addedNetworkObject: {fileID: 9161843306653962506}
   _networkObjectCache: {fileID: 9161843306653962506}
-  moveSpeed: 5
+  speed: 6
+  cc: {fileID: 0}
+  ownerCam: {fileID: 0}
 --- !u!114 &5609284180450176873
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -444,6 +450,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 891bbbb9e0d303a45a13962679cc6870, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerIdentity
+  _componentIndexCache: 5
+  _addedNetworkObject: {fileID: 9161843306653962506}
+  _networkObjectCache: {fileID: 9161843306653962506}
+--- !u!114 &-4413761258998537713
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5608895918688176000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c8463171669bec4f9895d8f4c021ae3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerRespawn
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 9161843306653962506}
   _networkObjectCache: {fileID: 0}

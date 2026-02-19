@@ -1,9 +1,11 @@
+using FishNet;
+using FishNet.Connection;
+using FishNet.Managing.Scened;
+using FishNet.Object;
+using FishNet.Object.Synchronizing;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using FishNet.Object;
-using FishNet.Connection;
-using FishNet.Managing.Scened;
 
 public class RoundManager : NetworkBehaviour
 {
@@ -20,6 +22,9 @@ public class RoundManager : NetworkBehaviour
     private PlayerSpawner _spawner;
     public static bool IsRoundRunning => Instance != null && Instance._roundRunning;
 
+    public readonly SyncVar<string> WinnerName = new SyncVar<string>("");
+    private readonly Dictionary<NetworkConnection, PlayerIdentity> _identityByConn = new();
+
     private void Awake() => Instance = this;
 
     public override void OnStartServer()
@@ -34,9 +39,28 @@ public class RoundManager : NetworkBehaviour
     }
 
     [Server]
+    public void RegisterIdentity(NetworkConnection conn, PlayerIdentity id)
+    {
+        if (conn == null || id == null) return;
+        _identityByConn[conn] = id;
+    }
+
+    [Server]
+    public void UnregisterIdentity(NetworkConnection conn)
+    {
+        if (conn == null) return;
+        _identityByConn.Remove(conn);
+    }
+
+    [Server]
     public void StartNewRoundServer()
     {
         _scores.Clear();
+
+        // IMPORTANT: clear winner before round starts so it doesn't stick.
+        WinnerName.Value = "";
+        ClearRoundUiObserversRpc();
+
         _timeLeft = roundSeconds;
         _roundRunning = true;
 
@@ -75,8 +99,14 @@ public class RoundManager : NetworkBehaviour
         }
 
         _roundRunning = false;
-        RoundOverObserversRpc();
+
+        ComputeWinnerServer();
+        BroadcastScores(); // optional but nice so final scoreboard is correct
+
+        // IMPORTANT: if SetRoundActiveClient(false) disables gameplay/UI roots,
+        // do it BEFORE showing round over UI.
         SetRoundActiveObserversRpc(false);
+        RoundOverObserversRpc();
     }
 
     [Server]
@@ -98,6 +128,27 @@ public class RoundManager : NetworkBehaviour
     public void NotifyHandoff(NetworkConnection newIt) => _currentIt = newIt;
 
     [Server]
+    private void ComputeWinnerServer()
+    {
+        var conns = NetworkManager.ServerManager.Clients.Values.ToList();
+
+        NetworkConnection bestConn = null;
+        int bestScore = int.MinValue;
+
+        foreach (var c in conns)
+        {
+            int s = _scores.TryGetValue(c, out int sc) ? sc : 0;
+            if (s > bestScore)
+            {
+                bestScore = s;
+                bestConn = c;
+            }
+        }
+
+        WinnerName.Value = FindNameFor(bestConn) ?? (bestConn != null ? $"Player {bestConn.ClientId}" : "Nobody");
+    }
+
+    [Server]
     private void BroadcastScores()
     {
         var conns = NetworkManager.ServerManager.Clients.Values.ToList();
@@ -114,21 +165,53 @@ public class RoundManager : NetworkBehaviour
         UpdateScoreboardObserversRpc(names, scores);
     }
 
-    [ObserversRpc]
+    [ObserversRpc(BufferLast = true)]
     private void UpdateScoreboardObserversRpc(string[] names, int[] scores)
         => ScoreboardUI.UpdateAll(names, scores);
 
-    [ObserversRpc]
+    [ObserversRpc(BufferLast = true)]
     private void BroadcastTimer(int secondsLeft)
         => ScoreboardUI.UpdateTimer(secondsLeft);
 
-    [ObserversRpc]
+    [ObserversRpc(BufferLast = true)]
     private void RoundOverObserversRpc()
         => ScoreboardUI.ShowRoundOver();
 
-    [ObserversRpc]
+    [ObserversRpc(BufferLast = true)]
     private void SetRoundActiveObserversRpc(bool running)
-        => RoundOverUI.SetRoundActiveClient(running);
+    {
+        RoundOverUI.SetRoundActiveClient(running);
+        if (running)
+            ScoreboardUI.HideRoundOver();
+    }
+
+    [ObserversRpc(BufferLast = true)]
+    private void ClearRoundUiObserversRpc()
+        => ScoreboardUI.HideRoundOver();
+
+    [ServerRpc(RequireOwnership = false)]
+    public void StartNewRoundServerRpc()
+    {
+        if (!IsServerInitialized) return;
+        StartNewRoundServer();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void ReturnToLobbyServerRpc()
+    {
+        if (!IsServerInitialized) return;
+        ReturnToLobbyServer();
+    }
+
+    [Server]
+    private void ReturnToLobbyServer()
+    {
+        var sld = new SceneLoadData("Lobby")
+        {
+            ReplaceScenes = ReplaceOption.All
+        };
+        InstanceFinder.SceneManager.LoadGlobalScenes(sld);
+    }
 
     [ServerRpc(RequireOwnership = false)]
     public void RequestUiSnapshotServerRpc(NetworkConnection caller = null)
@@ -155,34 +238,12 @@ public class RoundManager : NetworkBehaviour
         ScoreboardUI.UpdateAll(names, scores);
         ScoreboardUI.UpdateTimer(timeLeft);
         RoundOverUI.SetRoundActiveClient(running);
-    }
 
-    [ServerRpc(RequireOwnership = false)]
-    public void ReturnToLobbyServerRpc(NetworkConnection caller = null)
-    {
-        if (caller == null || caller.ClientId != 0) return;
-
-        if (NetworkObject != null && NetworkObject.IsSpawned)
-            NetworkManager.ServerManager.Despawn(NetworkObject);
-
-        var sld = new SceneLoadData("Lobby")
-        {
-            ReplaceScenes = ReplaceOption.All
-        };
-        NetworkManager.SceneManager.LoadGlobalScenes(sld);
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    public void HostShutdownAllServerRpc(string reason, NetworkConnection caller = null)
-    {
-        if (caller == null || caller.ClientId != 0) return;
-        PreShutdownObserversRpc(string.IsNullOrWhiteSpace(reason) ? "Host ended the game." : reason);
-    }
-
-    [ObserversRpc]
-    private void PreShutdownObserversRpc(string reason)
-    {
-        DisconnectNotice.Message = reason;
+        // If round isn't running, make sure round-over UI is visible for late joiners / late UI init.
+        if (!running)
+            ScoreboardUI.ShowRoundOver();
+        else
+            ScoreboardUI.HideRoundOver();
     }
 
     [Server]
