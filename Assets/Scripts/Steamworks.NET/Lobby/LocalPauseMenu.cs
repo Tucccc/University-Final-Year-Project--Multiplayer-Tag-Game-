@@ -2,41 +2,44 @@ using UnityEngine;
 
 public class LocalPauseMenu : MonoBehaviour
 {
+    public static bool IsPauseOpen { get; private set; }
     private Canvas menuPanel;
 
     void Awake()
     {
-        GameObject canvasObj = GameObject.Find("PauseMenu");
-        if (canvasObj != null)
-        {
-            menuPanel = canvasObj.GetComponent<Canvas>();
-            menuPanel.gameObject.SetActive(false);
-            Debug.Log("PauseMenu found and ready");
-        }
-        else
-        {
-            Debug.LogError("PauseMenu NOT found in scene!");
-        }
+        IsPauseOpen = false;
+        var go = GameObject.Find("PauseMenu");
+        menuPanel = go ? go.GetComponent<Canvas>() : null;
+        if (menuPanel) menuPanel.gameObject.SetActive(false);
     }
 
     void Update()
     {
+        // don’t allow pause while round over UI has disabled gameplay
         if (!RoundOverUI.ControlsEnabled)
         {
-            if (menuPanel?.gameObject.activeInHierarchy == true)
-                CloseMenu();
+            if (IsPauseOpen) CloseMenu();
             return;
         }
 
-        if (menuPanel == null || !Input.GetKeyDown(KeyCode.Escape))
-            return;
+        if (menuPanel == null) return;
 
-        if (!menuPanel.gameObject.activeInHierarchy)
-            OpenMenu();
-        else
-            CloseMenu();
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            if (!IsPauseOpen) OpenMenu();
+            else CloseMenu();
+        }
     }
 
-    void OpenMenu() => menuPanel.gameObject.SetActive(true);
-    void CloseMenu() => menuPanel.gameObject.SetActive(false);
+    void OpenMenu()
+    {
+        IsPauseOpen = true;
+        menuPanel.gameObject.SetActive(true);
+    }
+
+    void CloseMenu()
+    {
+        IsPauseOpen = false;
+        menuPanel.gameObject.SetActive(false);
+    }
 }
