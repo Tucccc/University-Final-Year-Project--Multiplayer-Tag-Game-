@@ -277,6 +277,6 @@ public class SteamSessionManager : MonoBehaviour
 
     public void OnApplicationQuit()
     {
-        OnApplicationQuit(); // Causes crashes in editor not sure if it will in build!
+        //OnApplicationQuit(); // Causes crashes in editor not sure if it will in build!
     }
 }
