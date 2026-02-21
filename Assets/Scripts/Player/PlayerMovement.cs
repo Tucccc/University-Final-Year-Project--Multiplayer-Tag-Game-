@@ -4,6 +4,15 @@ using UnityEngine;
 [RequireComponent(typeof(CharacterController))]
 public class PlayerMovement : NetworkBehaviour
 {
+    [Header("Controls")]
+    [SerializeField] private float mouseSensitivity = 3f;
+    [SerializeField] private KeyCode crouchKey = KeyCode.LeftShift;
+    [SerializeField] private KeyCode sprintKey = KeyCode.LeftControl;
+    [SerializeField] private string jumpButtonName = "Jump";
+    [SerializeField] private string horizontalAxis = "Horizontal";
+    [SerializeField] private string verticalAxis = "Vertical";
+
+
     [Header("Movement")]
     [SerializeField] private float walkSpeed = 1f;
     [SerializeField] private float sprintSpeed = 5f;
@@ -12,15 +21,11 @@ public class PlayerMovement : NetworkBehaviour
     [SerializeField] private float gravity = -9.81f;
 
     [Header("Crouch")]
-    [SerializeField] private KeyCode crouchKey = KeyCode.LeftControl;
     [SerializeField] private float standHeight = 1.8f;
     [SerializeField] private float crouchHeight = 1.1f;
     [SerializeField] private float colliderLerpSpeed = 12f;
     [Tooltip("Extra headroom needed to stand up (prevents standing into ceilings).")]
     [SerializeField] private float standCheckPadding = 0.05f;
-
-    [Header("Mouse Look")]
-    [SerializeField] private float mouseSensitivity = 3f;
 
     [Header("Look Limits (Owner Only)")]
     [SerializeField] private float minPitch = -75f;
@@ -58,9 +63,15 @@ public class PlayerMovement : NetworkBehaviour
     private Vector3[] _originalBoneScales;
 
     [Header("Camera Feel (Owner Only)")]
+    [SerializeField] private Camera playerCam;
     [SerializeField] private float bobAmount = 0.05f;
     [SerializeField] private float bobFrequency = 10f;
     [SerializeField] private float bobSmoothing = 10f;
+
+    [Header("Other Camns")]
+    [SerializeField] private Camera pauseCam;
+    [SerializeField] private Camera roundOverCam;
+
 
     [Header("Camera Tilt (Owner Only)")]
     [SerializeField] private float turnSwayAmount = 2f;
@@ -134,10 +145,21 @@ public class PlayerMovement : NetworkBehaviour
         // Optional: near clip tweak for owner FPS camera
         if (cameraTransform != null)
         {
-            var cam = cameraTransform.GetComponent<Camera>();
-            if (cam != null && ownerNearClipPlane > 0f)
-                cam.nearClipPlane = ownerNearClipPlane;
+            playerCam = cameraTransform.GetComponent<Camera>();
+            if (playerCam != null && ownerNearClipPlane > 0f)
+                playerCam.nearClipPlane = ownerNearClipPlane;
         }
+
+        // Assign pause camera
+        GameObject pauseCamObj = GameObject.Find("PauseCamera");
+        if(pauseCamObj != null)
+            pauseCam = pauseCamObj.GetComponent<Camera>();
+
+        GameObject roundOverCamObj = GameObject.Find("RoundOverCamera");
+        if (roundOverCamObj != null)
+            roundOverCam = roundOverCamObj.GetComponent<Camera>();
+
+        
 
         // Hide head/hair for owner WITHOUT breaking camera follow
         ApplyOwnerHide();
@@ -163,6 +185,8 @@ public class PlayerMovement : NetworkBehaviour
         bool roundAllowsControls = RoundOverUI.ControlsEnabled;
         bool paused = LocalPauseMenu.IsPauseOpen;
 
+        mouseSensitivity = PlayerPrefs.GetFloat("MouseSensitivity", 3f);
+
         UpdateCursorState();
 
         if (!loggedAnimator)
@@ -179,11 +203,18 @@ public class PlayerMovement : NetworkBehaviour
 
         if (roundAllowsControls && !paused)
         {
-            inputX = Input.GetAxisRaw("Horizontal");
-            inputZ = Input.GetAxisRaw("Vertical");
-            tryingSprint = Input.GetKey(KeyCode.LeftShift);
+            // Load keys (or use defaults if nothing is saved)
+            KeyCode sprintKey = (KeyCode)PlayerPrefs.GetInt("SprintKey", (int)KeyCode.LeftShift);
+            KeyCode crouchKey = (KeyCode)PlayerPrefs.GetInt("CrouchKey", (int)KeyCode.LeftControl);
+            KeyCode jumpKey = (KeyCode)PlayerPrefs.GetInt("JumpKey", (int)KeyCode.Space);
+
+            inputX = Input.GetAxisRaw("Horizontal"); // Stays WASD/Arrows per Project Settings
+            inputZ = Input.GetAxisRaw("Vertical");   // Stays WASD/Arrows per Project Settings
+
+            tryingSprint = Input.GetKey(sprintKey);
             wantsCrouch = Input.GetKey(crouchKey);
-            wantsJump = Input.GetButtonDown("Jump");
+            wantsJump = Input.GetKeyDown(jumpKey);
+
             ReadMouse();
         }
         else
@@ -191,6 +222,29 @@ public class PlayerMovement : NetworkBehaviour
             mouseX = 0f;
             mouseY = 0f;
         }
+
+        bool isPaused = paused;
+        bool isRoundOver = !roundAllowsControls;
+
+        if (isRoundOver)
+        {
+            if (roundOverCam != null) roundOverCam.enabled = true;
+            if (playerCam != null) playerCam.enabled = false;
+            if (pauseCam != null) pauseCam.enabled = false;
+        }
+        else if (isPaused)
+        {
+            if (pauseCam != null) pauseCam.enabled = true;
+            if (playerCam != null) playerCam.enabled = false;
+            if (roundOverCam != null) roundOverCam.enabled = false;
+        }
+        else
+        {
+            if (playerCam != null) playerCam.enabled = true;
+            if (pauseCam != null) pauseCam.enabled = false;
+            if (roundOverCam != null) roundOverCam.enabled = false;
+        }
+
 
         UpdateCrouchState(wantsCrouch);
 
@@ -459,4 +513,14 @@ public class PlayerMovement : NetworkBehaviour
         if (Mathf.Abs(controller.center.y - defaultControllerCenter.y) > 1.5f)
             controller.center = defaultControllerCenter;
     }
+
+    public void UpdateSensitivity(float newValue)
+    {
+        PlayerPrefs.SetFloat("MouseSensitivity", newValue);
+        PlayerPrefs.Save();
+
+        // This will show the value in your Unity Console every time you move the slider
+        Debug.Log("Saved Sensitivity: " + newValue);
+    }
+
 }

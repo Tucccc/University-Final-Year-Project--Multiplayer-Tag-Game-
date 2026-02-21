@@ -1,9 +1,12 @@
 using FishNet.Object;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class OpenPauseMenu : NetworkBehaviour
 {
     public Canvas menuPanel;
+    [SerializeField] private Camera mainCamera;
+
 
     public override void OnStartClient()
     {
@@ -45,9 +48,13 @@ public class OpenPauseMenu : NetworkBehaviour
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             if (!menuPanel.gameObject.activeInHierarchy)
+            {
                 OpenMenu();
+            }
             else
+            {
                 CloseMenu();
+            }
         }
     }
 
