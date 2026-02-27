@@ -1,5 +1,4 @@
-// Scripts/Game/TagStatus.cs
-using UnityEngine;
+﻿using UnityEngine;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 
@@ -41,6 +40,10 @@ public class TagStatus : NetworkBehaviour
     [Server]
     public void SetIt(bool value)
     {
+        // ✅ don't re-apply same state
+        if (IsIt.Value == value)
+            return;
+
         IsIt.Value = value;
         Debug.Log($"[TagStatus][Server] SetIt({value}) on {gameObject.name}");
     }

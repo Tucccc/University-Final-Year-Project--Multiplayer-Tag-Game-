@@ -1,5 +1,4 @@
-// Scripts/Player/Weapon.cs
-using UnityEngine;
+﻿using UnityEngine;
 using FishNet.Object;
 using UnityEngine.UI;
 using System.Collections;
@@ -18,19 +17,59 @@ public class Weapon : NetworkBehaviour
 
     [Header("Raycast")]
     [SerializeField] private float maxDistance = 200f;
-    [SerializeField] private LayerMask hitMask = ~0; // set this to Player layer in Inspector for player-only
 
+    [Tooltip("✅ Include PlayerHitbox layer here (and whatever world layers you want to hit).")]
+    [SerializeField] private LayerMask hitMask = ~0;
+
+    [Header("Optional: Layers To Ignore")]
+    [Tooltip("If you put ragdoll colliders on a 'Ragdoll' layer, put it here to avoid hitting them.")]
+    [SerializeField] private LayerMask ignoreMask = 0;
+
+    [Header("Owner Viewmodel (Hand IK)")]
+    [SerializeField] private bool ownerUseHandIK = true;
+
+    [Header("Tag Ragdoll")]
+    [SerializeField] private bool enableTagRagdoll = true;
+    [SerializeField] private float ragdollForce = 8f;
+    [Range(0f, 2f)]
+    [SerializeField] private float ragdollUpLift = 0.35f;
+    [SerializeField] private float ragdollStunSeconds = 1.2f;
+
+    [Header("Abilities")]
+    public PlayerAbilityManager abilityManager;
+
+    private FingerGunPose _fingerGunPose;
+    private FingerGunHandIK _handIK;
     private Coroutine _assignRoutine;
 
     private void Awake()
     {
         if (aimCamera == null)
             aimCamera = GetComponentInChildren<Camera>(true);
+
+        _fingerGunPose = GetComponentInChildren<FingerGunPose>(true);
+        _handIK = GetComponentInChildren<FingerGunHandIK>(true);
     }
 
     public override void OnStartClient()
     {
         base.OnStartClient();
+
+        if (_fingerGunPose == null)
+            _fingerGunPose = GetComponentInChildren<FingerGunPose>(true);
+        if (_handIK == null)
+            _handIK = GetComponentInChildren<FingerGunHandIK>(true);
+
+        if (IsOwner)
+        {
+            if (_handIK != null)
+                _handIK.enableIK = ownerUseHandIK;
+        }
+        else
+        {
+            if (_handIK != null)
+                _handIK.enableIK = false;
+        }
 
         if (!IsOwner)
         {
@@ -38,7 +77,6 @@ public class Weapon : NetworkBehaviour
             return;
         }
 
-        // Start assigning after spawn, not in Awake.
         if (_assignRoutine != null)
             StopCoroutine(_assignRoutine);
 
@@ -47,7 +85,6 @@ public class Weapon : NetworkBehaviour
 
     private IEnumerator AssignCrosshairUntilFound()
     {
-        // wait a frame so UI has a chance to instantiate
         yield return null;
 
         while (crosshair == null)
@@ -66,12 +103,10 @@ public class Weapon : NetworkBehaviour
 
     private RawImage TryFindLocalCrosshair()
     {
-        // 1) Best: search under this player's camera hierarchy (common if UI is attached to camera/player)
         if (aimCamera != null)
         {
             var t = aimCamera.transform;
 
-            // look for exact name
             var child = t.Find(crosshairObjectName);
             if (child != null)
             {
@@ -79,14 +114,11 @@ public class Weapon : NetworkBehaviour
                 if (ri != null) return ri;
             }
 
-            // or anywhere under the camera
             var allUnderCam = t.GetComponentsInChildren<RawImage>(true);
             foreach (var ri in allUnderCam)
                 if (ri.name == crosshairObjectName) return ri;
         }
 
-        // 2) Fallback: find any RawImage named Crosshair in the scene (including inactive)
-        // NOTE: This is safe now because we avoid static; each client process will find its own UI.
         var all = FindObjectsByType<RawImage>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         foreach (var ri in all)
             if (ri.name == crosshairObjectName)
@@ -101,10 +133,9 @@ public class Weapon : NetworkBehaviour
             return;
 
         if (crosshair == null)
-            return; // still not found; coroutine will keep trying
+            return;
 
         UpdateCrosshairVisibility();
-
         if (!crosshair.enabled)
             return;
 
@@ -112,12 +143,60 @@ public class Weapon : NetworkBehaviour
 
         if (Input.GetMouseButtonDown(0))
         {
+            PlayTagPoseLocal();
+
             Vector3 dir = aimCamera.transform.forward;
             Vector3 origin = aimCamera.transform.position + dir * muzzleForwardOffset;
 
             Debug.DrawRay(origin, dir * maxDistance, Color.red, 0.2f);
+
+            RequestTagPoseServerRpc();
             ShootServerRpc(origin, dir);
         }
+
+
+
+        if (Input.GetMouseButtonDown(1))
+        {
+            PlayTagPoseLocal();
+
+            if (abilityManager == null)
+            {
+                Debug.LogWarning("[Weapon] Right click but abilityManager is NULL.");
+                return;
+            }
+
+            RequestTagPoseServerRpc();
+
+            Vector3 dir = aimCamera.transform.forward;
+            Vector3 origin = aimCamera.transform.position + dir * muzzleForwardOffset;
+
+            Debug.DrawRay(origin, dir * maxDistance, Color.cyan, 0.5f);
+            Debug.Log($"[Weapon] Right click -> TryUseAbility origin={origin} dir={dir}");
+
+            abilityManager.TryUseAbility(origin, dir);
+        }
+    }
+
+    private void PlayTagPoseLocal()
+    {
+        if (_fingerGunPose == null)
+            _fingerGunPose = GetComponentInChildren<FingerGunPose>(true);
+
+        _fingerGunPose?.PlayFingerGunPose();
+    }
+
+    [ServerRpc(RequireOwnership = true)]
+    private void RequestTagPoseServerRpc()
+    {
+        PlayTagPoseObserversRpc();
+    }
+
+    [ObserversRpc(BufferLast = false)]
+    private void PlayTagPoseObserversRpc()
+    {
+        if (IsOwner) return;
+        PlayTagPoseLocal();
     }
 
     private void UpdateCrosshair()
@@ -125,8 +204,18 @@ public class Weapon : NetworkBehaviour
         Vector3 dir = aimCamera.transform.forward;
         Vector3 origin = aimCamera.transform.position + dir * muzzleForwardOffset;
 
-        bool hitPlayer = Physics.Raycast(origin, dir, maxDistance, hitMask, QueryTriggerInteraction.Ignore);
-        crosshair.color = hitPlayer ? crosshairHitColor : crosshairDefaultColor;
+        int finalMask = hitMask & ~ignoreMask;
+
+        // ✅ IMPORTANT: Collide with triggers so PlayerHitbox (IsTrigger) can be hit.
+        if (Physics.Raycast(origin, dir, out RaycastHit hit, maxDistance, finalMask, QueryTriggerInteraction.Collide))
+        {
+            var target = hit.collider.GetComponentInParent<TagStatus>();
+            crosshair.color = (target != null) ? crosshairHitColor : crosshairDefaultColor;
+        }
+        else
+        {
+            crosshair.color = crosshairDefaultColor;
+        }
     }
 
     private void UpdateCrosshairVisibility()
@@ -144,7 +233,10 @@ public class Weapon : NetworkBehaviour
     [ServerRpc(RequireOwnership = true)]
     private void ShootServerRpc(Vector3 origin, Vector3 direction)
     {
-        var hits = Physics.RaycastAll(origin, direction, maxDistance, hitMask, QueryTriggerInteraction.Ignore);
+        int finalMask = hitMask & ~ignoreMask;
+
+        // ✅ IMPORTANT: Collide with triggers so PlayerHitbox (IsTrigger) can be hit.
+        var hits = Physics.RaycastAll(origin, direction, maxDistance, finalMask, QueryTriggerInteraction.Collide);
         if (hits == null || hits.Length == 0) return;
 
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
@@ -153,37 +245,61 @@ public class Weapon : NetworkBehaviour
         var attacker = myRoot.GetComponent<TagStatus>();
         if (attacker == null) return;
 
+        TagStatus target = null;
+        RaycastHit targetHit = default;
+
         foreach (var h in hits)
         {
+            if (h.collider == null) continue;
+
             if (h.collider.transform.root == myRoot)
                 continue;
 
-            var target = h.collider.GetComponentInParent<TagStatus>();
-            if (target != null)
+            var maybeTarget = h.collider.GetComponentInParent<TagStatus>();
+            if (maybeTarget != null)
             {
-                var rm = RoundManager.Instance;
-
-                if (RoundManager.IsRoundRunning && attacker.IsIt.Value && target != attacker)
-                {
-                    attacker.SetIt(false);
-                    target.SetIt(true);
-
-                    var newItConn = target.NetworkObject?.Owner;
-                    rm.NotifyHandoff(newItConn);
-                }
-
-                PlayHitEffectObserversRpc(h.point, h.normal);
-            }
-            else
-            {
-                PlayHitEffectObserversRpc(h.point, h.normal);
+                target = maybeTarget;
+                targetHit = h;
+                break;
             }
 
+            targetHit = h;
             break;
+        }
+
+        var rm = RoundManager.Instance;
+
+        if (target != null)
+        {
+            if (RoundManager.IsRoundRunning && attacker.IsIt.Value && target != attacker)
+            {
+                attacker.SetIt(false);
+                target.SetIt(true);
+
+                var newItConn = target.NetworkObject?.Owner;
+                rm.NotifyHandoff(newItConn);
+
+                if (enableTagRagdoll)
+                {
+                    var rag = target.GetComponentInParent<NetworkRagdollStun>();
+                    if (rag != null && !rag.IsRagdolled)
+                    {
+                        Vector3 dir = direction.normalized;
+                        Vector3 impulse = (dir + Vector3.up * ragdollUpLift) * ragdollForce;
+                        rag.ServerStunAndLaunch(impulse, rag.TaggedRagdollSeconds);
+                    }
+                }
+            }
+
+            PlayHitEffectObserversRpc(targetHit.point, targetHit.normal);
+        }
+        else
+        {
+            PlayHitEffectObserversRpc(targetHit.point, targetHit.normal);
         }
     }
 
-    [ObserversRpc]
+    [ObserversRpc(BufferLast = false)]
     private void PlayHitEffectObserversRpc(Vector3 point, Vector3 normal)
     {
         // optional: spawn little spark / decal

@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 1832675945840869468}
   - component: {fileID: 758608816387218892}
   - component: {fileID: 7995440348012794432}
+  - component: {fileID: 1172135199192179659}
   m_Layer: 0
   m_Name: RoundManager
   m_TagString: Untagged
@@ -49,7 +50,9 @@ MonoBehaviour:
   _componentIndexCache: 0
   _addedNetworkObject: {fileID: 758608816387218892}
   _networkObjectCache: {fileID: 758608816387218892}
-  roundSeconds: 20
+  roundSeconds: 60
+  blastImpactFxPrefab: {fileID: 9111320563476075686, guid: c6fb71e58ec36784687d958bc39de3f2, type: 3}
+  blastImpactFxLife: 2
 --- !u!114 &758608816387218892
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -70,6 +73,7 @@ MonoBehaviour:
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
   - {fileID: 1832675945840869468}
+  - {fileID: 1172135199192179659}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
@@ -80,7 +84,7 @@ MonoBehaviour:
   _initializeOrder: 0
   _preventDespawnOnDisconnect: 0
   _defaultDespawnType: 0
-  _initializedTimestamp: -8584299055998217815
+  _initializedTimestamp: -8584294571170565181
   NetworkObserver: {fileID: 0}
   _enablePrediction: 0
   _predictionType: 0
@@ -117,3 +121,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d829f15fa4e62fd43b244f4c3be61e04, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ArenaUiBootstrap
+--- !u!114 &1172135199192179659
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2843072630400884295}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae7efe9c9eee0c34991fbf6c2a53665b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AbilityRoller
+  _componentIndexCache: 1
+  _addedNetworkObject: {fileID: 758608816387218892}
+  _networkObjectCache: {fileID: 758608816387218892}
+  database: {fileID: 11400000, guid: 198e7ad5c36e4dd47865a6943888cfb6, type: 2}
+  rollDelaySeconds: 2
+  matchSeed: 0
+  recentHistory: 2

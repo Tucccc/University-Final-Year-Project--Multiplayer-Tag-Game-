@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba59547ff2198c343b53c2dfc8d70234, type: 3}
+  m_Name: Invisable
+  m_EditorClassIdentifier: Assembly-CSharp::AbilityDefinition
+  id: freeze_shot
+  displayName: Freeze Shot
+  icon: {fileID: 0}
+  weight: 10
+  fireType: 0
+  range: 60
+  effectType: 0
+  freezeDuration: 1.5
+  blastRadius: 5
+  blastForce: 10
+  blastUpLift: 1
+  selfForceMultiplier: 1
+  ragdollDuration: 2

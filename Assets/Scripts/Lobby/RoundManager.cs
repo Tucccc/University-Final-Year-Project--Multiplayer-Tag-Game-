@@ -1,4 +1,4 @@
-using FishNet;
+﻿using FishNet;
 using FishNet.Connection;
 using FishNet.Managing.Scened;
 using FishNet.Object;
@@ -10,6 +10,9 @@ using UnityEngine;
 public class RoundManager : NetworkBehaviour
 {
     public static RoundManager Instance { get; private set; }
+
+    // Client-side round state driven by buffered ObserversRpc.
+    public static bool RoundRunningClient { get; private set; } = true;
 
     [Header("Round")]
     [SerializeField] private int roundSeconds = 180;
@@ -23,9 +26,29 @@ public class RoundManager : NetworkBehaviour
     public static bool IsRoundRunning => Instance != null && Instance._roundRunning;
 
     public readonly SyncVar<string> WinnerName = new SyncVar<string>("");
+
     private readonly Dictionary<NetworkConnection, PlayerIdentity> _identityByConn = new();
 
-    private void Awake() => Instance = this;
+    [SerializeField] private GameObject blastImpactFxPrefab;
+    [SerializeField] private float blastImpactFxLife = 2f;
+
+    private void Awake()
+    {
+        Instance = this;
+
+        // ✅ IMPORTANT: reset static flag when object exists (avoids stale values across scenes).
+        RoundRunningClient = true;
+    }
+
+    public override void OnStartClient()
+    {
+        base.OnStartClient();
+
+        // ✅ IMPORTANT: ask server for the authoritative UI/state snapshot
+        // so clients don't think the round is over due to timing.
+        if (IsClientInitialized)
+            RequestUiSnapshotServerRpc();
+    }
 
     public override void OnStartServer()
     {
@@ -57,7 +80,9 @@ public class RoundManager : NetworkBehaviour
     {
         _scores.Clear();
 
-        // IMPORTANT: clear winner before round starts so it doesn't stick.
+        if (AbilityRoller.Instance != null)
+            AbilityRoller.Instance.ServerEndRound();
+
         WinnerName.Value = "";
         ClearRoundUiObserversRpc();
 
@@ -83,6 +108,22 @@ public class RoundManager : NetworkBehaviour
         BroadcastScores();
         BroadcastTimer(_timeLeft);
 
+        var list = new List<PlayerAbilityManager>();
+
+        foreach (var c in NetworkManager.ServerManager.Clients.Values)
+        {
+            if (c?.Objects == null) continue;
+
+            foreach (var no in c.Objects)
+            {
+                var pam = no.GetComponent<PlayerAbilityManager>();
+                if (pam != null)
+                    list.Add(pam);
+            }
+        }
+
+        AbilityRoller.Instance.ServerStartRound(list);
+
         yield return StartCoroutine(TickTimer());
     }
 
@@ -99,12 +140,12 @@ public class RoundManager : NetworkBehaviour
         }
 
         _roundRunning = false;
+        if (AbilityRoller.Instance != null)
+            AbilityRoller.Instance.ServerEndRound();
 
         ComputeWinnerServer();
-        BroadcastScores(); // optional but nice so final scoreboard is correct
+        BroadcastScores();
 
-        // IMPORTANT: if SetRoundActiveClient(false) disables gameplay/UI roots,
-        // do it BEFORE showing round over UI.
         SetRoundActiveObserversRpc(false);
         RoundOverObserversRpc();
     }
@@ -180,6 +221,9 @@ public class RoundManager : NetworkBehaviour
     [ObserversRpc(BufferLast = true)]
     private void SetRoundActiveObserversRpc(bool running)
     {
+        // ✅ authoritative client-side flag (buffered)
+        RoundRunningClient = running;
+
         RoundOverUI.SetRoundActiveClient(running);
         if (running)
             ScoreboardUI.HideRoundOver();
@@ -237,9 +281,10 @@ public class RoundManager : NetworkBehaviour
     {
         ScoreboardUI.UpdateAll(names, scores);
         ScoreboardUI.UpdateTimer(timeLeft);
-        RoundOverUI.SetRoundActiveClient(running);
 
-        // If round isn't running, make sure round-over UI is visible for late joiners / late UI init.
+        RoundOverUI.SetRoundActiveClient(running);
+        RoundRunningClient = running;
+
         if (!running)
             ScoreboardUI.ShowRoundOver();
         else
@@ -274,4 +319,19 @@ public class RoundManager : NetworkBehaviour
         }
         return null;
     }
+
+    [ObserversRpc(BufferLast = false)]
+    public void PlayBlastImpactObserversRpc(Vector3 point, Vector3 normal)
+    {
+        if (blastImpactFxPrefab == null)
+            return;
+
+        Quaternion rot = normal.sqrMagnitude > 0.0001f
+            ? Quaternion.LookRotation(normal)
+            : Quaternion.identity;
+
+        var vfx = Instantiate(blastImpactFxPrefab, point, rot);
+        Destroy(vfx, blastImpactFxLife);
+    }
+
 }

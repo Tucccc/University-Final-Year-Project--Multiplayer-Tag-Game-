@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Linq;
 
 public static class RoundOverUI
@@ -19,6 +19,10 @@ public static class RoundOverUI
 
     public static void SetOverlayVisible(bool show)
     {
+        // ✅ Pause always wins: never show round-over overlay while paused.
+        if (LocalPauseMenu.IsPauseOpen)
+            show = false;
+
         _wantOverlayVisible = show;
         _haveOverlayState = true;
 
@@ -26,11 +30,23 @@ public static class RoundOverUI
         if (panel == null)
             return;
 
-        // KEY: if it's disabled on the client, enable it before setting visible.
-        if (!panel.gameObject.activeSelf)
-            panel.gameObject.SetActive(true);
+        // ✅ Only force GameObject active if we actually want to SHOW.
+        if (show)
+        {
+            if (!panel.gameObject.activeSelf)
+                panel.gameObject.SetActive(true);
 
-        panel.SetVisible(show);
+            panel.SetVisible(true);
+        }
+        else
+        {
+            // Hide without forcing activation.
+            panel.SetVisible(false);
+
+            // Optional but recommended: disable the GO to prevent it intercepting input.
+            if (panel.gameObject.activeSelf)
+                panel.gameObject.SetActive(false);
+        }
     }
 
     // Called by RoundOverPanel when it becomes available.
@@ -38,16 +54,25 @@ public static class RoundOverUI
     {
         if (panel == null) return;
 
-        if (_haveOverlayState)
+        bool show = _haveOverlayState ? _wantOverlayVisible : false;
+
+        // ✅ Pause always wins here too.
+        if (LocalPauseMenu.IsPauseOpen)
+            show = false;
+
+        if (show)
         {
-            if (_wantOverlayVisible && !panel.gameObject.activeSelf)
+            if (!panel.gameObject.activeSelf)
                 panel.gameObject.SetActive(true);
 
-            panel.SetVisible(_wantOverlayVisible);
+            panel.SetVisible(true);
         }
         else
         {
             panel.SetVisible(false);
+
+            if (panel.gameObject.activeSelf)
+                panel.gameObject.SetActive(false);
         }
     }
 

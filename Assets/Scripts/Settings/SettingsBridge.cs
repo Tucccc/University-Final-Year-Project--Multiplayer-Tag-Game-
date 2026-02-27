@@ -1,8 +1,8 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using System;
-using TMPro; // Required for TextMeshPro
+using TMPro;
 
 public class SettingsBridge : MonoBehaviour
 {
@@ -12,6 +12,7 @@ public class SettingsBridge : MonoBehaviour
     [SerializeField] private TMP_Text jumpText;
     [SerializeField] private TMP_Text sprintText;
     [SerializeField] private TMP_Text crouchText;
+    [SerializeField] private TMP_Text freeLookText;
 
     private bool isRebinding = false;
 
@@ -30,9 +31,16 @@ public class SettingsBridge : MonoBehaviour
     {
         isRebinding = true;
 
-        // Find the right TMP text to update
-        TMP_Text targetText = actionName == "JumpKey" ? jumpText : (actionName == "SprintKey" ? sprintText : crouchText);
-        targetText.text = "Press Any Key...";
+        // ✅ Pick the correct TMP text to update
+        TMP_Text targetText =
+            actionName == "JumpKey" ? jumpText :
+            actionName == "SprintKey" ? sprintText :
+            actionName == "CrouchKey" ? crouchText :
+            actionName == "FreeLook" ? freeLookText :
+            null;
+
+        if (targetText != null)
+            targetText.text = "Press Any Key...";
 
         yield return null;
 
@@ -43,7 +51,6 @@ public class SettingsBridge : MonoBehaviour
             {
                 foreach (KeyCode kcode in Enum.GetValues(typeof(KeyCode)))
                 {
-                    // Ignore Mouse0 (Left Click) so they don't bind it while clicking the button
                     if (Input.GetKeyDown(kcode) && kcode != KeyCode.Mouse0)
                     {
                         PlayerPrefs.SetInt(actionName, (int)kcode);
@@ -62,10 +69,10 @@ public class SettingsBridge : MonoBehaviour
 
     private void UpdateVisuals()
     {
-        // Update the TMP text components with the current saved keys
         if (jumpText) jumpText.text = ((KeyCode)PlayerPrefs.GetInt("JumpKey", (int)KeyCode.Space)).ToString();
         if (sprintText) sprintText.text = ((KeyCode)PlayerPrefs.GetInt("SprintKey", (int)KeyCode.LeftShift)).ToString();
         if (crouchText) crouchText.text = ((KeyCode)PlayerPrefs.GetInt("CrouchKey", (int)KeyCode.LeftControl)).ToString();
+        if (freeLookText) freeLookText.text = ((KeyCode)PlayerPrefs.GetInt("FreeLook", (int)KeyCode.LeftAlt)).ToString();
     }
 
     public void UpdateSensitivity(float newValue)
