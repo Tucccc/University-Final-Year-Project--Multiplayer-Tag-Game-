@@ -734,6 +734,8 @@ public class PlayerMovement : NetworkBehaviour
 
     private void BeginScramble(RaycastHit wallHit)
     {
+        if (IsOwner) SetScrambleServerRpc(true);
+
         _mode = ParkourMode.Scramble;
         _modeTimer = scrambleDuration;
         _cooldownTimer = scrambleCooldown;
@@ -816,6 +818,8 @@ public class PlayerMovement : NetworkBehaviour
                     controller.Move(Vector3.up * (velocity.y + externalVelocity.y) * Time.deltaTime);
                     if (_modeTimer <= 0f)
                     {
+                        if (IsOwner) SetScrambleServerRpc(false);
+
                         _mode = ParkourMode.None;
                         _cooldownTimer = scrambleCooldown;
                         if (debugParkourLogs) DbgLog("[Parkour] Scramble end");
@@ -908,6 +912,8 @@ public class PlayerMovement : NetworkBehaviour
 
     private void BeginHang(Vector3 hangPos, Vector3 standPos, Vector3 wallNormal)
     {
+        if (IsOwner) SetHangServerRpc(true);
+
         _mode = ParkourMode.Hang;
         _cooldownTimer = scrambleCooldown;
 
@@ -968,7 +974,6 @@ public class PlayerMovement : NetworkBehaviour
         _mode = ParkourMode.ClimbUp;
         _climbT = 0f;
 
-        // stay crouched through climb
         isCrouching = true;
         targetControllerHeight = crouchHeight;
         ApplyCrouchCollider();
@@ -978,12 +983,40 @@ public class PlayerMovement : NetworkBehaviour
         if (animator != null)
         {
             animator.SetBool(P_LEDGEHANG, false);
+            animator.SetBool(P_SCRAMBLE, false);
             animator.SetTrigger(T_CLIMBUP);
         }
+
+        if (IsOwner)
+            StartClimbServerRpc();
+    }
+
+    [ServerRpc(RequireOwnership = true)]
+    private void StartClimbServerRpc()
+    {
+        StartClimbObserversRpc();
+    }
+
+    [ObserversRpc(BufferLast = false)]
+    private void StartClimbObserversRpc()
+    {
+        // Optional: if owner already handles local visuals, skip owner here
+        if (IsOwner) return;
+
+        if (animator == null) return;
+
+        animator.SetBool(P_LEDGEHANG, false);
+
+        // Personally I'd avoid ResetTrigger unless you KNOW it’s stuck.
+        // animator.ResetTrigger(T_CLIMBUP);
+
+        animator.SetTrigger(T_CLIMBUP);
     }
 
     private void DropFromHang(Vector3 inputDir, bool jumpOff)
     {
+        if (IsOwner) SetHangServerRpc(false);
+
         if (animator != null)
         {
             animator.SetBool(P_LEDGEHANG, false);
@@ -1268,6 +1301,30 @@ public class PlayerMovement : NetworkBehaviour
                 targetControllerHeight = crouchHeight;
             }
         }
+    }
+
+    // --- Animator replication for parkour (so others SEE it) ---
+
+    [ServerRpc(RequireOwnership = true)]
+    private void SetHangServerRpc(bool on) => SetHangObserversRpc(on);
+
+    [ObserversRpc(BufferLast = false)]
+    private void SetHangObserversRpc(bool on)
+    {
+        if (animator == null) return;
+        animator.SetBool(P_LEDGEHANG, on);
+        if (on) animator.SetBool(P_SCRAMBLE, false);
+    }
+
+    [ServerRpc(RequireOwnership = true)]
+    private void SetScrambleServerRpc(bool on) => SetScrambleObserversRpc(on);
+
+    [ObserversRpc(BufferLast = false)]
+    private void SetScrambleObserversRpc(bool on)
+    {
+        if (animator == null) return;
+        animator.SetBool(P_SCRAMBLE, on);
+        if (on) animator.SetBool(P_LEDGEHANG, false);
     }
 
     private bool CanStandUp()
@@ -1603,4 +1660,42 @@ public class PlayerMovement : NetworkBehaviour
         if (mag > maxExternalSpeed)
             externalVelocity = externalVelocity / mag * maxExternalSpeed;
     }
+
+    //-------------------- Ragdoll --------------------
+
+    private void OnRagdollRecovered()
+    {
+        // Stop gravity accumulator + knockback/launch carry-over.
+        velocity = Vector3.zero;
+        externalVelocity = Vector3.zero;
+
+        // Clear queued jump grab / buffers (prevents instant re-trigger weirdness).
+        _jumpBufferTimer = 0f;
+
+        // Kill slide state cleanly (just in case you ragdoll mid-slide).
+        _isSliding = false;
+        _slideTimer = 0f;
+        _slideCooldownTimer = 0f;
+        if (animator != null)
+            animator.SetBool(P_SLIDE, false);
+
+        // Ensure we come back standing collider (optional but helps stop weird crouch offsets).
+        isCrouching = false;
+        targetControllerHeight = standHeight;
+        if (controller != null)
+        {
+            controller.height = standHeight;
+            controller.center = defaultControllerCenter;
+        }
+
+        // Reset grounded flag (safe)
+        isGrounded = (controller != null) && controller.isGrounded;
+    }
+
+    public Vector3 GetRagdollInheritVelocity()
+    {
+        return velocity + externalVelocity;
+    }
+
+
 }

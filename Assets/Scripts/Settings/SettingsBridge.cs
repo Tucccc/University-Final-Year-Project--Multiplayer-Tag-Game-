@@ -6,7 +6,13 @@ using TMPro;
 
 public class SettingsBridge : MonoBehaviour
 {
+    [Header("Sensitivity")]
     [SerializeField] private Slider sensitivitySlider;
+
+    [Header("Voice")]
+    [SerializeField] private Toggle voicePTTToggle;         // Push-to-talk on/off
+    [SerializeField] private Slider voiceVolumeSlider;      // 0..1 volume
+    [SerializeField] private TMP_Text voicePTTKeyText;      // shows current PTT key
 
     [Header("Rebind UI (TextMeshPro)")]
     [SerializeField] private TMP_Text jumpText;
@@ -18,9 +24,20 @@ public class SettingsBridge : MonoBehaviour
 
     private void Start()
     {
+        // (Optional) Set UI controls to saved values on open
+        if (sensitivitySlider)
+            sensitivitySlider.SetValueWithoutNotify(PlayerPrefs.GetFloat("MouseSensitivity", 3f));
+
+        if (voicePTTToggle)
+            voicePTTToggle.SetIsOnWithoutNotify(PlayerPrefs.GetInt("Voice_PTTEnabled", 1) == 1);
+
+        if (voiceVolumeSlider)
+            voiceVolumeSlider.SetValueWithoutNotify(PlayerPrefs.GetFloat("Voice_Volume", 1f));
+
         UpdateVisuals();
     }
 
+    // Called by your rebind buttons, passing "JumpKey", "SprintKey", etc.
     public void StartRebind(string actionName)
     {
         if (!isRebinding)
@@ -37,6 +54,7 @@ public class SettingsBridge : MonoBehaviour
             actionName == "SprintKey" ? sprintText :
             actionName == "CrouchKey" ? crouchText :
             actionName == "FreeLook" ? freeLookText :
+            actionName == "Voice_PTTKey" ? voicePTTKeyText :
             null;
 
         if (targetText != null)
@@ -51,6 +69,7 @@ public class SettingsBridge : MonoBehaviour
             {
                 foreach (KeyCode kcode in Enum.GetValues(typeof(KeyCode)))
                 {
+                    // ignore Mouse0 like you already do
                     if (Input.GetKeyDown(kcode) && kcode != KeyCode.Mouse0)
                     {
                         PlayerPrefs.SetInt(actionName, (int)kcode);
@@ -73,11 +92,30 @@ public class SettingsBridge : MonoBehaviour
         if (sprintText) sprintText.text = ((KeyCode)PlayerPrefs.GetInt("SprintKey", (int)KeyCode.LeftShift)).ToString();
         if (crouchText) crouchText.text = ((KeyCode)PlayerPrefs.GetInt("CrouchKey", (int)KeyCode.LeftControl)).ToString();
         if (freeLookText) freeLookText.text = ((KeyCode)PlayerPrefs.GetInt("FreeLook", (int)KeyCode.LeftAlt)).ToString();
+
+        // Voice PTT key label
+        if (voicePTTKeyText)
+            voicePTTKeyText.text = ((KeyCode)PlayerPrefs.GetInt("Voice_PTTKey", (int)KeyCode.V)).ToString();
     }
 
+    // Hook your sensitivity slider OnValueChanged(float) to this
     public void UpdateSensitivity(float newValue)
     {
         PlayerPrefs.SetFloat("MouseSensitivity", newValue);
+        PlayerPrefs.Save();
+    }
+
+    // Hook your voice volume slider OnValueChanged(float) to this
+    public void UpdateVoiceVolume(float newValue01)
+    {
+        PlayerPrefs.SetFloat("Voice_Volume", Mathf.Clamp01(newValue01));
+        PlayerPrefs.Save();
+    }
+
+    // Hook your PTT toggle OnValueChanged(bool) to this
+    public void SetVoicePTTEnabled(bool enabled)
+    {
+        PlayerPrefs.SetInt("Voice_PTTEnabled", enabled ? 1 : 0);
         PlayerPrefs.Save();
     }
 }

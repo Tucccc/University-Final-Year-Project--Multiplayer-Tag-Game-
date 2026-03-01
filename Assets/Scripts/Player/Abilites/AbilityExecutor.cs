@@ -95,7 +95,8 @@ public class AbilityExecutor : MonoBehaviour
 
         Vector3 impactPoint = default;
         Vector3 impactNormal = Vector3.up;
-
+        Transform impactRoot = null;
+        Collider impactCollider = null;
         bool foundImpact = false;
 
         foreach (var h in hits)
@@ -108,7 +109,10 @@ public class AbilityExecutor : MonoBehaviour
 
             impactPoint = h.point;
             impactNormal = h.normal;
+            impactCollider = h.collider;
+            impactRoot = h.collider.transform.root;
             foundImpact = true;
+
             Debug.Log($"[Executor][SERVER] Blast impact hit '{h.collider.name}' at {impactPoint}");
             break;
         }
@@ -119,13 +123,12 @@ public class AbilityExecutor : MonoBehaviour
             return false;
         }
 
-
-        // 2) Find affected colliders in radius (players only recommended).
+        // 2) Find affected colliders in radius
         float radius = def.blastRadius;
         if (radius <= 0.001f)
         {
             Debug.LogWarning("[Executor][SERVER] BlastShot: blastRadius is 0.");
-            return true; // impact happened but nothing to affect
+            return true;
         }
 
         var cols = Physics.OverlapSphere(impactPoint, radius, affectMask, QueryTriggerInteraction.Collide);
@@ -134,34 +137,103 @@ public class AbilityExecutor : MonoBehaviour
         if (cols == null || cols.Length == 0)
             return true;
 
-        // 3) Deduplicate players by root transform.
-        var uniqueRoots = new System.Collections.Generic.HashSet<Transform>();
+        // 3) Deduplicate roots + pick a "best collider" per root (better target point)
+        var rootToBestCol = new System.Collections.Generic.Dictionary<Transform, Collider>();
         foreach (var c in cols)
         {
             if (c == null) continue;
-            uniqueRoots.Add(c.transform.root);
+            Transform root = c.transform.root;
+
+            if (!rootToBestCol.TryGetValue(root, out var best) || best == null)
+            {
+                rootToBestCol[root] = c;
+            }
+            else
+            {
+                // Prefer larger bounds (usually body) instead of tiny hitboxes
+                if (c.bounds.size.sqrMagnitude > best.bounds.size.sqrMagnitude)
+                    rootToBestCol[root] = c;
+            }
         }
 
-        // 4) Apply effects.
-        foreach (var targetRoot in uniqueRoots)
+        // 4) Apply effects
+        foreach (var kvp in rootToBestCol)
         {
-            if (targetRoot == null) continue;
+            Transform targetRoot = kvp.Key;
+            Collider targetCol = kvp.Value;
+            if (targetRoot == null || targetCol == null) continue;
 
             bool isSelf = (targetRoot == shooterRoot);
 
-            // Direction away from blast center + optional uplift.
-            Vector3 away = targetRoot.position - impactPoint;
-            if (away.sqrMagnitude < 0.0001f) away = Vector3.up;
-            away = away.normalized;
+            // --- Choose a good target point (CC center is best) ---
+            Vector3 targetPoint = targetCol.bounds.center;
+            var cc = targetRoot.GetComponentInChildren<CharacterController>();
+            if (cc != null)
+                targetPoint = cc.transform.TransformPoint(cc.center);
 
-            Vector3 impulseDir = (away + Vector3.up * def.blastUpLift).normalized;
+            // --- Occlusion check: don't blast through walls ---
+            // Ray from blast center to target point. If something blocks and isn't part of targetRoot => blocked.
+            Vector3 toTarget = targetPoint - impactPoint;
+            float distToTarget = toTarget.magnitude;
 
-            float force = def.blastForce * (isSelf ? def.selfForceMultiplier : 1f);
+            if (distToTarget > 0.05f)
+            {
+                Vector3 toTargetDir = toTarget / distToTarget;
+                Vector3 occStart = impactPoint + toTargetDir * 0.05f;
+
+                if (Physics.Raycast(occStart, toTargetDir, out RaycastHit blockHit, distToTarget - 0.05f, hitMask, QueryTriggerInteraction.Ignore))
+                {
+                    if (blockHit.collider != null && blockHit.collider.transform.root != targetRoot)
+                    {
+                        // Blocked by world/other object. Skip (or you can reduce force instead of skipping)
+                        continue;
+                    }
+                }
+            }
+
+            // --- Direction logic ---
+            // If the initial impact was directly on THIS target, use -impactNormal (true push away from the hit surface).
+            // Otherwise use explosion center -> target center.
+            bool directHitThisTarget = (impactRoot != null && impactRoot == targetRoot);
+
+            Vector3 impulseDir;
+            if (directHitThisTarget)
+            {
+                impulseDir = (-impactNormal).normalized;
+            }
+            else
+            {
+                Vector3 away = (targetPoint - impactPoint);
+                if (away.sqrMagnitude < 0.0001f)
+                    away = -impactNormal;
+
+                impulseDir = away.normalized;
+            }
+
+            // Optional: add "uplift" only when we're not strongly slamming down.
+            if (def.blastUpLift > 0f)
+            {
+                float verticalDot = Vector3.Dot(impulseDir, Vector3.up); // -1 = down, +1 = up
+                if (verticalDot > -0.25f)
+                    impulseDir = (impulseDir + Vector3.up * def.blastUpLift).normalized;
+            }
+
+            // Optional: distance falloff so edge of radius is weaker (feels nicer)
+            float falloff = 1f;
+            if (radius > 0.0001f)
+            {
+                float t = Mathf.Clamp01(distToTarget / radius);
+                falloff = 1f - t; // linear falloff
+            }
+
+            float force = def.blastForce * falloff * (isSelf ? def.selfForceMultiplier : 1f);
             Vector3 impulse = impulseDir * force;
+
+            // Debug so you can verify direction
+            Debug.Log($"[Blast] target={targetRoot.name} directHit={directHitThisTarget} dir={impulseDir} force={force:F2} impulse={impulse}");
 
             if (isSelf)
             {
-                // CharacterController launch: use your movement script external impulse.
                 var move = targetRoot.GetComponentInChildren<PlayerMovement>();
                 if (move != null)
                 {
@@ -176,7 +248,6 @@ public class AbilityExecutor : MonoBehaviour
                 continue;
             }
 
-            // Other players: ragdoll + launch (your existing system).
             var rag = targetRoot.GetComponentInChildren<NetworkRagdollStun>();
             if (rag != null && !rag.IsRagdolled)
             {
@@ -185,7 +256,6 @@ public class AbilityExecutor : MonoBehaviour
             }
             else
             {
-                // Fallback: if no ragdoll component, try applying impulse via CC movement too.
                 var move = targetRoot.GetComponentInChildren<PlayerMovement>();
                 if (move != null)
                 {
@@ -200,10 +270,8 @@ public class AbilityExecutor : MonoBehaviour
         }
 
         _roundManager.PlayBlastImpactObserversRpc(impactPoint, impactNormal);
-
         return true;
     }
-
 
 
 }

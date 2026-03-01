@@ -15951,9 +15951,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f531009ade0310540a287ff1b4cf8c51, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AbilityExecutor
-  _componentIndexCache: 255
-  _addedNetworkObject: {fileID: 0}
-  _networkObjectCache: {fileID: 0}
   database: {fileID: 11400000, guid: 198e7ad5c36e4dd47865a6943888cfb6, type: 2}
   hitMask:
     serializedVersion: 2
