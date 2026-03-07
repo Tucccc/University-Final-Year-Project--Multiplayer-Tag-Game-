@@ -20,8 +20,8 @@ MonoBehaviour:
   range: 200
   effectType: 1
   freezeDuration: 0
-  blastRadius: 10
-  blastForce: 100
-  blastUpLift: 100
+  blastRadius: 7
+  blastForce: 35
+  blastUpLift: 0
   selfForceMultiplier: 100
   ragdollDuration: 3

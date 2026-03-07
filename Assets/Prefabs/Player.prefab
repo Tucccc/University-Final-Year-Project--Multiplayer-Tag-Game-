@@ -2387,6 +2387,9 @@ GameObject:
   - component: {fileID: 1002418961262570100}
   - component: {fileID: 1629263482080859786}
   - component: {fileID: 6977146856232486888}
+  - component: {fileID: 7738122095300670089}
+  - component: {fileID: 8647202322033324291}
+  - component: {fileID: 3556140294583414872}
   m_Layer: 3
   m_Name: Player
   m_TagString: Untagged
@@ -2443,6 +2446,8 @@ MonoBehaviour:
   - {fileID: 676223068048983763}
   - {fileID: 4396630106234899107}
   - {fileID: 6734170114061550953}
+  - {fileID: 1002418961262570100}
+  - {fileID: 1629263482080859786}
   - {fileID: 9037487889458590005}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
@@ -2454,7 +2459,7 @@ MonoBehaviour:
   _initializeOrder: 0
   _preventDespawnOnDisconnect: 0
   _defaultDespawnType: 0
-  _initializedTimestamp: -8584295389162723652
+  _initializedTimestamp: -8584292318862957888
   NetworkObserver: {fileID: 0}
   _enablePrediction: 0
   _predictionType: 0
@@ -2950,20 +2955,34 @@ MonoBehaviour:
   - {fileID: 1419945025576104809}
   - {fileID: 5665767910407495730}
   - {fileID: 4812285414130295810}
+  requireGroundedToRecover: 1
+  groundedStableSeconds: 0.6
+  maxWaitForGroundSeconds: 2
+  recoverExtraUp: 0.15
+  recoverOverlapLiftStep: 0.1
+  recoverMaxLift: 1.5
+  stableHipsSpeed: 0.45
   groundMask:
     serializedVersion: 2
-    m_Bits: 128
-  raycastUp: 1
+    m_Bits: 4294967295
+  raycastUp: 10
   groundExtra: 0.05
   inputDelayAfterRecover: 0.08
-  maxImpulse: 12
+  maxImpulse: 100
   taggedRagdollSeconds: 1.2
   followRoot: {fileID: 6848226369748677150}
   followRootLerp: 25
+  inheritEstimatedRootVelocity: 1
+  estimatedVelocityMultiplier: 1
+  maxEstimatedSpeed: 60
+  velocitySmoothing: 25
+  alsoUseMovementProvidedVelocity: 1
+  movementVelocityBlend: 0.5
   enableSelfRagdollTest: 1
   selfRagdollKey: 107
   selfRagdollSeconds: 1.2
   selfImpulseUp: 2.5
+  rootNetworkTransform: {fileID: 5609284180450176873}
 --- !u!114 &1002418961262570100
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2976,9 +2995,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 53c5adab55bd16c4a87a9e9f05bf433f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StatusController
-  _componentIndexCache: 255
+  _componentIndexCache: 11
   _addedNetworkObject: {fileID: 9161843306653962506}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 9161843306653962506}
 --- !u!114 &1629263482080859786
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2991,9 +3010,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 55f2fefbba49adb4cba87c541920f70b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAbilityManager
-  _componentIndexCache: 255
+  _componentIndexCache: 12
   _addedNetworkObject: {fileID: 9161843306653962506}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 9161843306653962506}
   executor: {fileID: 0}
 --- !u!114 &6977146856232486888
 MonoBehaviour:
@@ -3009,6 +3028,138 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FreezeVfxController
   status: {fileID: 1002418961262570100}
   freezeFxObject: {fileID: 8515784997450151912}
+--- !u!82 &7738122095300670089
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5608895918688176000}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 20
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &8647202322033324291
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5608895918688176000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cdb30574b0adf944986c62a25d26796d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VoiceChat
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 9161843306653962506}
+  _networkObjectCache: {fileID: 0}
+  VoiceChatType: 1
+  VoiceDetectionType: 0
+  Activated: 1
+  PushToTalkKey: 118
+  source: {fileID: 7738122095300670089}
+  proximityRange: 20
+  voiceActivationThreshold: 0.002
+--- !u!114 &3556140294583414872
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5608895918688176000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf9c68058f9207040b6c963839187747, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VoiceSettingsRuntime
+  voiceChat: {fileID: 8647202322033324291}
 --- !u!1 &5615973120907491103
 GameObject:
   m_ObjectHideFlags: 0
@@ -3696,7 +3847,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2836e36774ca1c4bbbee976e17b649c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Component.Transforming.NetworkTransform
-  _componentIndexCache: 11
+  _componentIndexCache: 13
   _addedNetworkObject: {fileID: 9161843306653962506}
   _networkObjectCache: {fileID: 9161843306653962506}
   _componentConfiguration: 0
