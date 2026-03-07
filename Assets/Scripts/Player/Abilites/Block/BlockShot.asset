@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba59547ff2198c343b53c2dfc8d70234, type: 3}
+  m_Name: BlockShot
+  m_EditorClassIdentifier: Assembly-CSharp::AbilityDefinition
+  id: block_shot
+  displayName: Block Shot
+  icon: {fileID: 0}
+  weight: 10
+  fireType: 0
+  range: 60
+  effectType: 3
+  freezeDuration: 0
+  blastRadius: 0
+  blastForce: 0
+  blastUpLift: 0
+  selfForceMultiplier: 0
+  ragdollDuration: 0
+  blockDuration: 1.5

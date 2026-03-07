@@ -1303,6 +1303,8 @@ public class PlayerMovement : NetworkBehaviour
         }
     }
 
+
+
     // --- Animator replication for parkour (so others SEE it) ---
 
     [ServerRpc(RequireOwnership = true)]
@@ -1659,6 +1661,25 @@ public class PlayerMovement : NetworkBehaviour
         float mag = externalVelocity.magnitude;
         if (mag > maxExternalSpeed)
             externalVelocity = externalVelocity / mag * maxExternalSpeed;
+    }
+
+    [ObserversRpc(BufferLast = false)]
+    public void TeleportObserversRpc(Vector3 newPosition)
+    {
+        ForceTeleportLocal(newPosition);
+    }
+    public void ForceTeleportLocal(Vector3 newPosition)
+    {
+        if (controller != null)
+            controller.enabled = false;
+
+        velocity = Vector3.zero;
+        externalVelocity = Vector3.zero;
+
+        transform.position = newPosition;
+
+        if (controller != null)
+            controller.enabled = true;
     }
 
     //-------------------- Ragdoll --------------------

@@ -34,6 +34,12 @@ public class AbilityExecutor : MonoBehaviour
             case AbilityEffectType.Blast:
                 return ServerBlastShot(def, origin, aimDir, shooter);
 
+            case AbilityEffectType.Swap:
+                return ServerSwapShot(def, origin, aimDir, shooter);
+
+            case AbilityEffectType.Block:
+                return ServerBlockShot(def, origin, aimDir, shooter);
+
             default:
                 return false;
         }
@@ -74,6 +80,80 @@ public class AbilityExecutor : MonoBehaviour
         }
 
         Debug.Log("[Executor][SERVER] FreezeShot: no valid StatusController targets hit.");
+        return false;
+    }
+
+    private bool ServerBlockShot(AbilityDefinition def, Vector3 origin, Vector3 dir, GameObject shooter)
+    {
+        if (shooter == null)
+            return false;
+
+        var status = shooter.GetComponentInParent<StatusController>();
+        if (status == null)
+        {
+            Debug.Log("[Executor][SERVER] Block: shooter has no StatusController.");
+            return false;
+        }
+
+        status.ServerApplyTagImmunity(def.blockDuration);
+        Debug.Log($"[Executor][SERVER] Block applied to '{status.gameObject.name}' for {def.blockDuration}s");
+        return true;
+    }
+
+    private bool ServerSwapShot(AbilityDefinition def, Vector3 origin, Vector3 dir, GameObject shooter)
+    {
+        dir = dir.normalized;
+
+        var hits = Physics.RaycastAll(origin, dir, def.range, hitMask, QueryTriggerInteraction.Collide);
+        if (hits == null || hits.Length == 0)
+        {
+            Debug.Log("[Executor][SERVER] SwapShot: no hits.");
+            return false;
+        }
+
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        Transform shooterRoot = shooter.transform.root;
+
+        foreach (var h in hits)
+        {
+            if (h.collider == null) continue;
+
+            if (h.collider.transform.root == shooterRoot)
+                continue;
+
+            var status = h.collider.GetComponentInParent<StatusController>();
+            if (status == null)
+                continue;
+
+            Transform targetRoot = status.transform.root;
+
+            PlayerMovement shooterMove = shooterRoot.GetComponentInChildren<PlayerMovement>();
+            PlayerMovement targetMove = targetRoot.GetComponentInChildren<PlayerMovement>();
+
+            if (shooterMove == null || targetMove == null)
+            {
+                Debug.Log("[Executor][SERVER] SwapShot: missing PlayerMovement.");
+                return false;
+            }
+
+            Vector3 shooterPos = shooterRoot.position;
+            Vector3 targetPos = targetRoot.position;
+
+            Vector3 shooterNewPos = targetPos + Vector3.up * 0.05f;
+            Vector3 targetNewPos = shooterPos + Vector3.up * 0.05f;
+
+            shooterMove.ForceTeleportLocal(shooterNewPos);
+            targetMove.ForceTeleportLocal(targetNewPos);
+
+            shooterMove.TeleportObserversRpc(shooterNewPos);
+            targetMove.TeleportObserversRpc(targetNewPos);
+
+            Debug.Log($"[Executor][SERVER] Swapped '{shooterRoot.name}' with '{targetRoot.name}'");
+            return true;
+        }
+
+        Debug.Log("[Executor][SERVER] SwapShot: no valid target hit.");
         return false;
     }
 

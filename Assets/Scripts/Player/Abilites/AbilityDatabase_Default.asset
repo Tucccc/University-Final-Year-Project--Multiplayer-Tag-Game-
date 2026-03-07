@@ -13,5 +13,7 @@ MonoBehaviour:
   m_Name: AbilityDatabase_Default
   m_EditorClassIdentifier: Assembly-CSharp::AbilityDatabase
   abilities:
-  - {fileID: 11400000, guid: 92f5b6190739c6146902886705529863, type: 2}
+  - {fileID: 11400000, guid: 518719c56db62a140bf014330f02f335, type: 2}
   - {fileID: 11400000, guid: bce1516ca6e098643a02cdf49a43f276, type: 2}
+  - {fileID: 11400000, guid: 92f5b6190739c6146902886705529863, type: 2}
+  - {fileID: 11400000, guid: 59b47091cff0c6342a44e841bbbd946e, type: 2}

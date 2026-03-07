@@ -18,7 +18,7 @@ public class Weapon : NetworkBehaviour
     [Header("Raycast")]
     [SerializeField] private float maxDistance = 200f;
 
-    [Tooltip("✅ Include PlayerHitbox layer here (and whatever world layers you want to hit).")]
+    [Tooltip("Include PlayerHitbox layer here (and whatever world layers you want to hit).")]
     [SerializeField] private LayerMask hitMask = ~0;
 
     [Header("Optional: Layers To Ignore")]
@@ -34,6 +34,12 @@ public class Weapon : NetworkBehaviour
     [Range(0f, 2f)]
     [SerializeField] private float ragdollUpLift = 0.35f;
     [SerializeField] private float ragdollStunSeconds = 1.2f;
+
+    [Header("Tune tag")]
+    [SerializeField] private float tagTimer = 0;
+    [SerializeField] private float tagDelay = 0.5f;
+
+
 
     [Header("Abilities")]
     public PlayerAbilityManager abilityManager;
@@ -141,7 +147,11 @@ public class Weapon : NetworkBehaviour
 
         UpdateCrosshair();
 
-        if (Input.GetMouseButtonDown(0))
+        if (tagTimer > 0f)
+            tagTimer -= Time.deltaTime;
+
+
+        if (Input.GetMouseButtonDown(0) && tagTimer <= 0f)
         {
             PlayTagPoseLocal();
 
@@ -152,6 +162,8 @@ public class Weapon : NetworkBehaviour
 
             RequestTagPoseServerRpc();
             ShootServerRpc(origin, dir);
+
+            tagTimer = tagDelay;
         }
 
 
@@ -235,7 +247,6 @@ public class Weapon : NetworkBehaviour
     {
         int finalMask = hitMask & ~ignoreMask;
 
-        // ✅ IMPORTANT: Collide with triggers so PlayerHitbox (IsTrigger) can be hit.
         var hits = Physics.RaycastAll(origin, direction, maxDistance, finalMask, QueryTriggerInteraction.Collide);
         if (hits == null || hits.Length == 0) return;
 
@@ -271,6 +282,14 @@ public class Weapon : NetworkBehaviour
 
         if (target != null)
         {
+            var targetStatus = target.GetComponentInParent<StatusController>();
+            if (targetStatus != null && targetStatus.IsTagImmune)
+            {
+                Debug.Log($"[Tag] {target.gameObject.name} is immune to tagging.");
+                PlayHitEffectObserversRpc(targetHit.point, targetHit.normal);
+                return;
+            }
+
             if (RoundManager.IsRoundRunning && attacker.IsIt.Value && target != attacker)
             {
                 attacker.SetIt(false);

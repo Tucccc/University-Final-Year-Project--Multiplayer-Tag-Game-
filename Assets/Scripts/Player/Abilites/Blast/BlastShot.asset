@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ba59547ff2198c343b53c2dfc8d70234, type: 3}
-  m_Name: Blast_Shot
+  m_Name: BlastShot
   m_EditorClassIdentifier: Assembly-CSharp::AbilityDefinition
   id: blast_shot
   displayName: Blast Shot

@@ -1,7 +1,7 @@
 using UnityEngine;
 
 public enum AbilityFireType { Hitscan }
-public enum AbilityEffectType { Freeze, Blast }
+public enum AbilityEffectType { Freeze, Blast, Swap, Block }
 
 [CreateAssetMenu(menuName = "Abilities/Ability Definition")]
 public class AbilityDefinition : ScriptableObject
@@ -28,4 +28,8 @@ public class AbilityDefinition : ScriptableObject
     public float blastUpLift = 1f;
     public float selfForceMultiplier = 1f;
     public float ragdollDuration = 2f;
+
+    [Header("Block")]
+    public float blockDuration = 1.5f;
+
 }

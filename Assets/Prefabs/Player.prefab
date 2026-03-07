@@ -2448,6 +2448,7 @@ MonoBehaviour:
   - {fileID: 6734170114061550953}
   - {fileID: 1002418961262570100}
   - {fileID: 1629263482080859786}
+  - {fileID: 8647202322033324291}
   - {fileID: 9037487889458590005}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
@@ -2459,7 +2460,7 @@ MonoBehaviour:
   _initializeOrder: 0
   _preventDespawnOnDisconnect: 0
   _defaultDespawnType: 0
-  _initializedTimestamp: -8584292318862957888
+  _initializedTimestamp: -8584287087044523631
   NetworkObserver: {fileID: 0}
   _enablePrediction: 0
   _predictionType: 0
@@ -3028,6 +3029,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FreezeVfxController
   status: {fileID: 1002418961262570100}
   freezeFxObject: {fileID: 8515784997450151912}
+  blockFxObject: {fileID: 8515784997450151912}
+  autoFindStatusInParent: 1
+  disableEffectsOnStart: 1
 --- !u!82 &7738122095300670089
 AudioSource:
   m_ObjectHideFlags: 0
@@ -3050,7 +3054,7 @@ AudioSource:
   Priority: 128
   DopplerLevel: 1
   MinDistance: 1
-  MaxDistance: 20
+  MaxDistance: 13
   Pan2D: 0
   rolloffMode: 0
   BypassEffects: 0
@@ -3137,9 +3141,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cdb30574b0adf944986c62a25d26796d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VoiceChat
-  _componentIndexCache: 255
+  _componentIndexCache: 13
   _addedNetworkObject: {fileID: 9161843306653962506}
-  _networkObjectCache: {fileID: 0}
+  _networkObjectCache: {fileID: 9161843306653962506}
   VoiceChatType: 1
   VoiceDetectionType: 0
   Activated: 1
@@ -3847,7 +3851,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2836e36774ca1c4bbbee976e17b649c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Component.Transforming.NetworkTransform
-  _componentIndexCache: 13
+  _componentIndexCache: 14
   _addedNetworkObject: {fileID: 9161843306653962506}
   _networkObjectCache: {fileID: 9161843306653962506}
   _componentConfiguration: 0

@@ -10,18 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ba59547ff2198c343b53c2dfc8d70234, type: 3}
-  m_Name: Invisable
+  m_Name: SwapShot
   m_EditorClassIdentifier: Assembly-CSharp::AbilityDefinition
-  id: freeze_shot
-  displayName: Freeze Shot
+  id: swap_shot
+  displayName: Swap Shot
   icon: {fileID: 0}
   weight: 10
   fireType: 0
   range: 60
-  effectType: 0
-  freezeDuration: 1.5
+  effectType: 2
+  freezeDuration: 0
   blastRadius: 5
   blastForce: 10
   blastUpLift: 1
   selfForceMultiplier: 1
   ragdollDuration: 2
+  blockDuration: 1.5
